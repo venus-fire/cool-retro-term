@@ -6,6 +6,7 @@ pkgs.mkShell {
     qt6.qtdeclarative
     qt6.qtshadertools
     qt6.qtsvg
+    qt6.qt5compat
     cmake
     gcc
     libsixel
@@ -13,7 +14,16 @@ pkgs.mkShell {
   ];
 
   shellHook = ''
-    export QT_PLUGIN_PATH="${pkgs.qt6.qtbase.bin}/${pkgs.qt6.qtbase.qtPluginPrefix}"
-    export QML2_IMPORT_PATH="${pkgs.qt6.qtdeclarative.bin}/${pkgs.qt6.qtdeclarative.qtQmlPrefix}"
+    # Find Qt QML module paths dynamically (NixOS store paths change per build)
+    QTDECL="$(pkg-config --variable=prefix Qt6Qml 2>/dev/null || true)"
+    QT5COMPAT="$(find /nix/store -maxdepth 1 -name '*qt5compat*' -type d 2>/dev/null | sort | tail -1)"
+
+    # Build the QML import path
+    QML_PATH="$(pwd)/qmltermwidget"
+    [ -n "$QTDECL" ] && QML_PATH="$QML_PATH:$QTDECL/lib/qt-6/qml"
+    [ -n "$QT5COMPAT" ] && QML_PATH="$QML_PATH:$QT5COMPAT/lib/qt-6/qml"
+
+    export QML2_IMPORT_PATH="$QML_PATH"
+    echo "QML2_IMPORT_PATH=$QML2_IMPORT_PATH"
   '';
 }
